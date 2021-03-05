@@ -82,8 +82,13 @@ def match_gpu(file_path = 'my_example.png', path_dir = 'images/', batch_size = 3
     score_order = score_order[::-1]
     return score_order, scores, onlyfiles
 
-def prep_binary_dataset():
+def prep_binary_dataset(minmax = False, threshold = 127, projection = 'mean'):
     """Prepares a binary dataset to use for matches and saves it as match_X.npy.
+    
+    # Arguments
+        minmax (bool): Whether to use min-max contrast normalization. Defaults to False.
+        threshold (int): Threshold to use in the binarization. Defaults to 127. Needs to be a float in [0,1] if minmax is True.
+        projection (str): How to collapse the final dimension. "mean" or "max". Defaults to "mean".
     """
     images = []
     a = (len(onlyfiles), 566, 600)
@@ -94,8 +99,16 @@ def prep_binary_dataset():
         im = cv2.imread(file_path)
         imarray = np.array(im)
         imarray = imarray[:,200:800,:]
-        imarray = np.max(imarray,axis=2)
-        X[file_index,:,:] = imarray>127
+        if projection == 'mean':
+            imarray = np.mean(imarray, axis=2)
+        else:
+            imarray = np.max(imarray,axis=2)
+        if minmax:
+            imarray = imarray - np.min(imarray)
+            imarray = imarray / np.max(imarray)
+            X[file_index,:,:] = imarray>threshold
+        else:
+            X[file_index,:,:] = imarray>threshold
     np.save('match_X', X)
     
 def load_binary_dataset():
